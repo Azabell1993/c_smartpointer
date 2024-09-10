@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "smartptr.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "unistd.h": "c"
     }
 }

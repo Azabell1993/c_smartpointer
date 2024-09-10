@@ -1,0 +1,63 @@
+\hypertarget{structSmartPtr}{}\doxysection{Smart\+Ptr Struct Reference}
+\label{structSmartPtr}\index{SmartPtr@{SmartPtr}}
+
+
+스마트 포인터 구조체  
+
+
+
+
+{\ttfamily \#include $<$smartptr.\+h$>$}
+
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+void $\ast$ \mbox{\hyperlink{structSmartPtr_afa5aac6520f0d05d01d7ac99e5ec78e3}{ptr}}
+\begin{DoxyCompactList}\small\item\em 실제 메모리를 가리킴 \end{DoxyCompactList}\item 
+int $\ast$ \mbox{\hyperlink{structSmartPtr_af65db2a8867a48af1dde827164fd6341}{ref\+\_\+count}}
+\begin{DoxyCompactList}\small\item\em 참조 카운트 \end{DoxyCompactList}\item 
+pthread\+\_\+mutex\+\_\+t $\ast$ \mbox{\hyperlink{structSmartPtr_a1d16d059e43b883557fb92bd08f7b82c}{mutex}}
+\begin{DoxyCompactList}\small\item\em 뮤텍스 보호 \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+스마트 포인터 구조체 
+
+이 구조체는 포인터와 참조 카운트, 뮤텍스를 관리합니다. 
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structSmartPtr_a1d16d059e43b883557fb92bd08f7b82c}\label{structSmartPtr_a1d16d059e43b883557fb92bd08f7b82c}} 
+\index{SmartPtr@{SmartPtr}!mutex@{mutex}}
+\index{mutex@{mutex}!SmartPtr@{SmartPtr}}
+\doxysubsubsection{\texorpdfstring{mutex}{mutex}}
+{\footnotesize\ttfamily pthread\+\_\+mutex\+\_\+t$\ast$ Smart\+Ptr\+::mutex}
+
+
+
+뮤텍스 보호 
+
+\mbox{\Hypertarget{structSmartPtr_afa5aac6520f0d05d01d7ac99e5ec78e3}\label{structSmartPtr_afa5aac6520f0d05d01d7ac99e5ec78e3}} 
+\index{SmartPtr@{SmartPtr}!ptr@{ptr}}
+\index{ptr@{ptr}!SmartPtr@{SmartPtr}}
+\doxysubsubsection{\texorpdfstring{ptr}{ptr}}
+{\footnotesize\ttfamily void$\ast$ Smart\+Ptr\+::ptr}
+
+
+
+실제 메모리를 가리킴 
+
+\mbox{\Hypertarget{structSmartPtr_af65db2a8867a48af1dde827164fd6341}\label{structSmartPtr_af65db2a8867a48af1dde827164fd6341}} 
+\index{SmartPtr@{SmartPtr}!ref\_count@{ref\_count}}
+\index{ref\_count@{ref\_count}!SmartPtr@{SmartPtr}}
+\doxysubsubsection{\texorpdfstring{ref\_count}{ref\_count}}
+{\footnotesize\ttfamily int$\ast$ Smart\+Ptr\+::ref\+\_\+count}
+
+
+
+참조 카운트 
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{smartptr_8h}{smartptr.\+h}}\end{DoxyCompactItemize}

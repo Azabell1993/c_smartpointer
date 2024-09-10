@@ -26,18 +26,53 @@
 #define RELEASE_SHARED_PTR(ptr) release_shared_ptr(ptr);
 
 static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
-static void kernel_errExit(const char *format, ...);
-static void safe_kernel_printf(const char *format, ...);
-static void terminate(bool useExit3);
-void default_deleter(void *ptr);
 
-// 네트워크 정보 구조체
+/**
+ * @brief 커널 오류 메시지를 출력하고 프로그램을 종료하는 함수
+ *
+ * @param format 오류 메시지 형식
+ */
+static void kernel_errExit(const char *format, ...);
+
+/**
+ * @brief 스레드 안전한 출력 함수
+ *
+ * @param format 출력 메시지 형식
+ */
+static void safe_kernel_printf(const char *format, ...);
+
+/**
+ * @brief 종료 처리 함수
+ *
+ * @param useExit3 true면 exit(), false면 _exit() 호출
+ */
+static void terminate(bool useExit3);
+
+/**
+ * @brief 기본 소멸자 함수 (free 사용)
+ *
+ * @param ptr 해제할 포인터
+ */
+void default_deleter(void *ptr) {
+    free(ptr);
+}
+
+/**
+ * @struct NetworkInfo
+ * @brief 네트워크 정보를 저장하는 구조체
+ *
+ * IPv4 주소와 주소 패밀리를 저장합니다.
+ */
 typedef struct {
-    char ip[INET_ADDRSTRLEN];  // IPv4 주소를 저장
-    sa_family_t family;        // 주소 패밀리 (AF_INET 등)
+    char ip[INET_ADDRSTRLEN];  ///< IPv4 주소
+    sa_family_t family;        ///< 주소 패밀리 (AF_INET 등)
 } NetworkInfo;
 
-// 네트워크 정보를 얻는 함수
+/**
+ * @brief 로컬 네트워크 정보를 가져오는 함수
+ *
+ * @return NetworkInfo 네트워크 정보 구조체
+ */
 NetworkInfo get_local_network_info() {
     struct addrinfo hints, *res;
     NetworkInfo net_info;
@@ -45,9 +80,8 @@ NetworkInfo get_local_network_info() {
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;  // IPv4
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;  // 로컬 호스트를 위한 IP 주소 찾기
+    hints.ai_flags = AI_PASSIVE;  // 로컬 IP 찾기
 
-    // 호스트 이름을 통해 네트워크 정보 얻기
     char hostname[256];
     gethostname(hostname, sizeof(hostname));
     if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
@@ -55,128 +89,166 @@ NetworkInfo get_local_network_info() {
         exit(EXIT_FAILURE);
     }
 
-    // 네트워크 정보 저장 (IPv4 주소)
     struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
     inet_ntop(AF_INET, &(ipv4->sin_addr), net_info.ip, INET_ADDRSTRLEN);
     net_info.family = res->ai_family;
 
-    freeaddrinfo(res);  // 동적 할당된 메모리 해제
+    freeaddrinfo(res);
     return net_info;
 }
 
-// 기본 소멸자 함수 (free)
-void default_deleter(void *ptr) {
-    free(ptr);
-}
-
-// shared_ptr 구조체 정의
+/**
+ * @struct SharedPtr
+ * @brief 공유 스마트 포인터
+ */
 typedef struct {
-    void *ptr;               // 실제로 가리키는 메모리
-    int *ref_count;          // 참조 카운트
-    pthread_mutex_t *mutex;  // 참조 카운트 보호용 뮤텍스
-    void (*deleter)(void*);  // 사용자 정의 소멸자 함수
+    void *ptr;               ///< 실제 메모리
+    int *ref_count;          ///< 참조 카운트
+    pthread_mutex_t *mutex;  ///< 뮤텍스
+    void (*deleter)(void*);  ///< 소멸자 함수
 } SharedPtr;
 
-// unique_ptr 구조체 정의
+/**
+ * @struct UniquePtr
+ * @brief 고유 스마트 포인터
+ */
 typedef struct {
-    void *ptr;               // 실제로 가리키는 메모리
-    void (*deleter)(void*);  // 사용자 정의 소멸자 함수
+    void *ptr;               ///< 실제 메모리
+    void (*deleter)(void*);  ///< 소멸자 함수
 } UniquePtr;
 
-// 공유 스마트 포인터 생성 (shared_ptr)
+/**
+ * @brief shared_ptr 생성 함수
+ *
+ * @param size 할당할 메모리 크기
+ * @param deleter 소멸자 함수
+ * @return 생성된 SharedPtr 구조체
+ */
 SharedPtr create_shared_ptr(size_t size, void (*deleter)(void*)) {
     SharedPtr sp;
-    sp.ptr = malloc(size);  // 동적 메모리 할당
-    sp.ref_count = (int*)malloc(sizeof(int));  // 참조 카운트 메모리 할당
-    *(sp.ref_count) = 1;    // 참조 카운트 초기값 1
-    sp.mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));  // 뮤텍스 할당
-    sp.deleter = deleter ? deleter : default_deleter;  // 사용자 정의 소멸자 함수 설정
-    pthread_mutex_init(sp.mutex, NULL);  // 뮤텍스 초기화
+    sp.ptr = malloc(size);
+    sp.ref_count = (int*)malloc(sizeof(int));
+    *(sp.ref_count) = 1;
+    sp.mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+    sp.deleter = deleter ? deleter : default_deleter;
+    pthread_mutex_init(sp.mutex, NULL);
 
     return sp;
 }
 
-// 고유 스마트 포인터 생성 (unique_ptr)
+/**
+ * @brief unique_ptr 생성 함수
+ *
+ * @param size 할당할 메모리 크기
+ * @param deleter 소멸자 함수
+ * @return 생성된 UniquePtr 구조체
+ */
 UniquePtr create_unique_ptr(size_t size, void (*deleter)(void*)) {
     UniquePtr up;
-    up.ptr = malloc(size);  // 동적 메모리 할당
-    up.deleter = deleter ? deleter : default_deleter;  // 사용자 정의 소멸자 함수 설정
+    up.ptr = malloc(size);
+    up.deleter = deleter ? deleter : default_deleter;
     return up;
 }
 
-// shared_ptr 참조 카운트 증가 (retain)
+/**
+ * @brief shared_ptr 참조 카운트 증가
+ *
+ * @param sp 참조할 SharedPtr
+ */
 void retain_shared_ptr(SharedPtr *sp) {
-    pthread_mutex_lock(sp->mutex);  // 참조 카운트 보호를 위한 뮤텍스 잠금
-    (*(sp->ref_count))++;           // 참조 카운트 증가
-    pthread_mutex_unlock(sp->mutex);  // 뮤텍스 잠금 해제
+    pthread_mutex_lock(sp->mutex);
+    (*(sp->ref_count))++;
+    pthread_mutex_unlock(sp->mutex);
 }
 
-// shared_ptr 참조 카운트 감소 및 메모리 해제 (release)
+/**
+ * @brief shared_ptr 참조 카운트 감소 및 메모리 해제
+ *
+ * @param sp 해제할 SharedPtr
+ */
 void release_shared_ptr(SharedPtr *sp) {
     if (sp->ptr == NULL) {
-        // If the pointer is already NULL, do nothing
         safe_kernel_printf("SharedPtr is already released\n");
         return;
     }
 
-    // Free the memory
-    sp->deleter(sp->ptr);       // 사용자 정의 소멸자 호출을 통한 메모리 해제
-    sp->ptr = NULL;             // 포인터를 NULL로 설정하여 중복 해제를 방지
+    sp->deleter(sp->ptr);
+    sp->ptr = NULL;
 
-    // Clean up the ref_count and mutex
-    free(sp->ref_count);        // 참조 카운트 메모리 해제
+    free(sp->ref_count);
     sp->ref_count = NULL;
-    pthread_mutex_destroy(sp->mutex);  // 뮤텍스 파괴
-    free(sp->mutex);            // 뮤텍스 메모리 해제
+    pthread_mutex_destroy(sp->mutex);
+    free(sp->mutex);
     sp->mutex = NULL;
 }
 
-// unique_ptr 메모리 해제 (release)
+/**
+ * @brief unique_ptr 메모리 해제
+ *
+ * @param up 해제할 UniquePtr
+ */
 void release_unique_ptr(UniquePtr *up) {
     if (up->ptr) {
-        up->deleter(up->ptr);  // 사용자 정의 소멸자 호출
-        up->ptr = NULL;        // 포인터를 NULL로 설정하여 중복 해제를 방지
+        up->deleter(up->ptr);
+        up->ptr = NULL;
     }
 }
 
-// unique_ptr 소유권 이전 (transfer, move semantics)
+/**
+ * @brief unique_ptr 소유권 이전
+ *
+ * @param up 소유권을 이전할 UniquePtr
+ * @return 새로 생성된 UniquePtr
+ */
 UniquePtr transfer_unique_ptr(UniquePtr *up) {
-    UniquePtr new_up = *up;  // 새로운 unique_ptr로 소유권 이동
-    up->ptr = NULL;          // 기존 unique_ptr은 NULL로 설정
+    UniquePtr new_up = *up;
+    up->ptr = NULL;
     return new_up;
 }
 
-// 스레드 함수 (shared_ptr 사용)
+/**
+ * @brief 스레드 함수 (shared_ptr 사용)
+ *
+ * @param arg SharedPtr 인수
+ * @return NULL
+ */
 void* thread_function_shared(void* arg) {
     SharedPtr *sp = (SharedPtr*)arg;
-    retain_shared_ptr(sp);  // 스레드 내에서 참조 카운트 증가
+    retain_shared_ptr(sp);
     printf("스레드에서 shared_ptr 사용 중 - ref_count: %d\n", *(sp->ref_count));
 
-    sleep(1);  // 작업 수행...
+    sleep(1);
 
-    release_shared_ptr(sp);  // 참조 카운트 감소
+    release_shared_ptr(sp);
     return NULL;
 }
 
-// 스레드 함수 (unique_ptr 사용)
+/**
+ * @brief 스레드 함수 (unique_ptr 사용)
+ *
+ * @param arg UniquePtr 인수
+ * @return NULL
+ */
 void* thread_function_unique(void* arg) {
     UniquePtr *up = (UniquePtr*)arg;
     printf("스레드에서 unique_ptr 사용 중\n");
 
-    sleep(1);  // 작업 수행...
-
-    // unique_ptr은 스레드 종료 시 자동 해제됨
+    sleep(1);
     return NULL;
 }
 
-// 안전한 출력 함수
+/**
+ * @brief 스레드 안전한 출력 함수
+ *
+ * @param format 출력 메시지 형식
+ */
 static void safe_kernel_printf(const char *format, ...) {
     va_list args;
     va_start(args, format);
 
-    pthread_mutex_lock(&print_mutex);  // 출력 뮤텍스 잠금
-    vprintf(format, args);  // 출력 수행
-    pthread_mutex_unlock(&print_mutex);  // 출력 뮤텍스 해제
+    pthread_mutex_lock(&print_mutex);
+    vprintf(format, args);
+    pthread_mutex_unlock(&print_mutex);
 
     if(errno != 0) {
         kernel_errExit("Failed to print message");
@@ -185,7 +257,11 @@ static void safe_kernel_printf(const char *format, ...) {
     va_end(args);
 }
 
-// 오류 출력 함수
+/**
+ * @brief 커널 오류 메시지 출력 후 종료
+ *
+ * @param format 오류 메시지 형식
+ */
 static void kernel_errExit(const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -194,10 +270,14 @@ static void kernel_errExit(const char *format, ...) {
     fprintf(stderr, "errno: %d (%s)\n", errno, strerror(errno));
     
     va_end(args);
-    exit(EXIT_FAILURE);  // 프로그램 종료
+    exit(EXIT_FAILURE);
 }
 
-// 종료 처리 함수
+/**
+ * @brief 종료 처리 함수
+ *
+ * @param useExit3 true면 exit(), false면 _exit() 호출
+ */
 static void terminate(bool useExit3) {
     if (useExit3) {
         exit(EXIT_FAILURE);
