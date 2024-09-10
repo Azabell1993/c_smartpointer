@@ -51,7 +51,7 @@ typedef struct {
 UniquePtr은 고유한 소유권을 가지며, 참조 카운트 없이 메모리를 단독으로 관리합니다.
 
 #### 1.3 주요 함수 요약
-  1. create_shared_ptr
+##### 1. create_shared_ptr
   ```
   SharedPtr create_shared_ptr(size_t size, void (*deleter)(void*))
   ```
@@ -61,7 +61,7 @@ UniquePtr은 고유한 소유권을 가지며, 참조 카운트 없이 메모리
   - deleter: 메모리를 해제할 소멸자 함수.
   - 리턴값: 새로운 SharedPtr 구조체.
   
-  2. create_unique_ptr
+##### 2. create_unique_ptr
   ```
   UniquePtr create_unique_ptr(size_t size, void (*deleter)(void*))
   ```
@@ -71,49 +71,49 @@ UniquePtr은 고유한 소유권을 가지며, 참조 카운트 없이 메모리
   - deleter: 메모리를 해제할 소멸자 함수.
   - 리턴값: 새로운 UniquePtr 구조체.
 
-  3. retain_shared_ptr
+##### 3. retain_shared_ptr
   ```
   void retain_shared_ptr(SharedPtr *sp)
   ```
   **기능:** SharedPtr의 참조 카운트를 증가시켜 메모리가 해제되지 않도록 합니다.
   
-  4. release_shared_ptr
+##### 4. release_shared_ptr
   ```
   void release_shared_ptr(SharedPtr *sp)
   ```
   **기능:** SharedPtr의 참조 카운트를 감소시키고, 참조 카운트가 0이 되면 메모리 해제.
   
-  5. release_unique_ptr
+##### 5. release_unique_ptr
   ```
   void release_unique_ptr(UniquePtr *up)
   ```
   **기능:** UniquePtr의 소유한 메모리를 해제합니다.
   
-  7. transfer_unique_ptr
+##### 6. transfer_unique_ptr
   ```
   UniquePtr transfer_unique_ptr(UniquePtr *up)
   ```
   **기능:** UniquePtr의 소유권을 다른 포인터로 이전하고 기존 포인터는 NULL로 설정.
   
-  7. safe_kernel_printf
+##### 7. safe_kernel_printf
   ```
   static void safe_kernel_printf(const char *format, ...)
   ```
   **기능:** 스레드 안전하게 포맷된 메시지를 출력합니다.
   
-  8. kernel_errExit
+##### 8. kernel_errExit
   ```
   static void kernel_errExit(const char *format, ...)
   ```
   **기능:** 오류 메시지를 출력하고 프로그램을 종료합니다.
   
-  9. terminate
+##### 9. terminate
   ```
   static void terminate(bool useExit3)
   ```
   **기능:** exit() 또는 _exit()를 사용하여 프로그램을 종료합니다.
 
-  10. deleter  
+##### 10. deleter  
 ###### Deleter 설명
     Deleter는 스마트 포인터에서 메모리를 해제할 때 사용하는 사용자 정의 소멸자 함수입니다. 기본적으로 스마트 포인터는 동적으로 할당된 메모리를 **free()**를 통해 해제하지만, 사용자 정의 소멸자 함수를 설정하면 특정 리소스 관리나 커스텀 해제 동작을 수행할 수 있습니다.
     
@@ -127,48 +127,47 @@ UniquePtr은 고유한 소유권을 가지며, 참조 카운트 없이 메모리
     
     예를 들어, 파일을 열고 닫는 동작이 필요한 경우, deleter를 통해 파일을 닫는 동작을 정의할 수 있습니다.
     
-##### Deleter 예시 코드
-    ```
+##### Deleter 예시 코드  
+
     void file_deleter(void *file_ptr) {
         fclose((FILE *)file_ptr);  // 파일 포인터를 닫음
     }
-    
     SharedPtr file_ptr = create_shared_ptr(sizeof(FILE), file_deleter);
-    ```
-    
-    이 코드는 file_deleter라는 사용자 정의 소멸자 함수를 사용하여, 파일을 다룰 때 스마트 포인터가 자동으로 파일 포인터를 닫는 역할을 하게 합니다.
+       
+    이 코드는 file_deleter라는 사용자 정의 소멸자 함수를 사용하여, 파일을 다룰 때 스마트 포인터가 자동으로 파일 포인터를 닫는 역할을 하게 합니다.  
   
-##### Deleter를 사용하는 이유
+##### Deleter를 사용하는 이유  
     - `리소스 관리`: 메모리뿐만 아니라, 파일, 네트워크 소켓, 데이터베이스 연결 등 다양한 리소스를 안전하게 해제할 수 있습니다.
     - `확장성`: 기본적인 free()가 아닌, 특정 리소스에 맞는 해제 동작을 수행할 수 있도록 유연성을 제공합니다.
     - `중앙 집중화된 관리`: 메모리 해제뿐만 아니라 리소스 관리(예: 객체 파괴, 연결 해제)를 한곳에서 처리할 수 있어 코드가 간결해집니다.
-    기본 Deleter (free 사용)
-    ```
+    
+    - 기본 Deleter (free 사용)  
     void default_deleter(void *ptr) {
         free(ptr);  // 기본 메모리 해제 동작
     }
     기본적으로 스마트 포인터에서 deleter를 지정하지 않으면, default_deleter가 호출되어 malloc으로 할당된 메모리를 free로 해제합니다.
 
-##### Deleter 사용의 장점
+##### Deleter 사용의 장점  
     - `메모리 및 리소스 관리 통합`: 동적으로 할당된 메모리뿐만 아니라 파일, 네트워크 등 다양한 리소스를 안전하게 해제할 수 있습니다.
     - `가독성 향상`: 리소스를 해제하는 코드가 스마트 포인터 내부에 캡슐화되므로, 명시적으로 해제하지 않아도 자동으로 정리됩니다.
     - `오류 예방`: 수동 메모리 해제 시 발생할 수 있는 실수나 메모리 누수를 예방할 수 있습니다.
 
-###### 요약
+###### 요약  
   - `SharedPtr`은 참조 카운트를 기반으로 메모리를 공유하며, 참조가 0이 되면 메모리를 해제합니다.
   - `UniquePtr`은 고유 소유권을 가지며, 소유권을 이전할 수 있고 메모리를 한 번만 해제합니다.
   
   출력과 오류 처리는 스레드 안전하게 수행되며, 프로그램 종료 함수도 포함됩니다.
 
-#### 1.4 코드 예시
+##### 1.4 코드 예시
 ```
 SharedPtr sp = create_shared_ptr(sizeof(int), NULL);
 *(int*)sp.ptr = 42;
 retain_shared_ptr(&sp);
 release_shared_ptr(&sp);
 ```
-이 코드는 SharedPtr을 생성하고, 참조 카운트를 관리하며 메모리를 해제하는 과정입니다.
 
+이 코드는 SharedPtr을 생성하고, 참조 카운트를 관리하며 메모리를 해제하는 과정입니다.  
+  
 
 #### 1.5 가변인자가 없는 스마트 포인터의 용도
 가변 인자가 없는 스마트 포인터는 고정된 인자의 초기화를 통해 스마트 포인터를 생성하고 관리하는 방식입니다. 가변 인자를 사용하지 않는다는 것은 스마트 포인터 생성 시 정해진 데이터 타입과 정해진 크기의 메모리만을 처리할 수 있다는 것을 의미합니다.
@@ -213,10 +212,10 @@ typedef struct {
 ```
 `SmartPtr`은 가변 인자를 사용하여 생성 시 다양한 타입의 데이터를 동적으로 초기화할 수 있습니다.
 
-#### 2.2 주요 함수 요약
+##### 2.2 주요 함수 요약
 > 가변 인자를 사용하는 스마트 포인터는 다양한 데이터 타입과 초기화 값을 처리할 수 있는 유연한 메모리 관리 기능을 제공합니다. 참조 카운트와 뮤텍스를 통해 다중 스레드 환경에서도 안전하게 메모리를 관리할 수 있습니다.
 
-  1. create_smart_ptr
+###### 1. create_smart_ptr
   ```
   SmartPtr create_smart_ptr(size_t size, ...)
   ```
@@ -226,61 +225,61 @@ typedef struct {
   - ...: 가변 인자를 통해 초기값을 설정.
   - 리턴값: 새로운 SmartPtr 구조체.
   
-  2. retain
+###### 2. retain
   ```
   void retain(SmartPtr *sp)
   ```
   **기능:** 스마트 포인터의 참조 카운트를 증가시킵니다.
   
-  3. release
+###### 3. release
   ```
   void release(SmartPtr *sp)
   ```
   **기능:** 참조 카운트를 감소시키고, 참조 카운트가 0이 되면 메모리를 해제합니다.
   
-  4. safe_kernel_printf
+###### 4. safe_kernel_printf
   ```
   static void safe_kernel_printf(const char *format, ...)
   ```
   **기능:** 스레드 안전하게 포맷된 메시지를 출력합니다.
   
-  5. kernel_errExit
+###### 5. kernel_errExit
   ```
   static void kernel_errExit(const char *format, ...)
   ```
   **기능:** 오류 메시지를 출력하고 프로그램을 종료합니다.
   
-  6. terminate
+###### 6. terminate
   ```
   static void terminate(bool useExit3)
   ```
   **기능:** 프로그램을 종료하는 함수입니다.
   
-  7. kernel_socket_communication
+###### 7. kernel_socket_communication
   ```
   static void kernel_socket_communication(int sock_fd, const char *message, char *response, size_t response_size)
   ```
   **기능:** 소켓을 통해 메시지를 전송하고 응답을 받습니다.
   
-  8. kernel_wait_for_process
+###### 8. kernel_wait_for_process
   ```
   static void kernel_wait_for_process(pid_t pid)
   ```
   **기능:** 자식 프로세스의 종료를 기다립니다.
 
-  10. kernel_create_thread
+###### 9. kernel_create_thread
   ```
   static void kernel_create_thread(pthread_t *thread, void *(*start_routine)(void *), void *arg)
   ```
   **기능:** 새로운 스레드를 생성합니다.
 
-  12. kernel_join_thread
+###### 10. kernel_join_thread
   ```
   static void kernel_join_thread(pthread_t thread)
   ```
   **기능:** 스레드가 종료될 때까지 기다립니다.
 
-  ###### 요약
+###### 요약
   SmartPtr는 가변 인자를 사용해 다양한 데이터 타입을 처리할 수 있으며, 참조 카운트를 통해 메모리 관리를 자동으로 처리합니다.
   네트워크 통신, 스레드 생성 및 종료 처리 등의 기능도 포함되어 있습니다.
 
