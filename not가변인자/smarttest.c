@@ -41,6 +41,8 @@ int main() {
     } else {
         printf("UniquePtr 메모리 해제 실패\n");
     }
+    printf("new_up.ptr : %p\n", new_up.ptr);
+    printf("up.ptr : %p\n", up.ptr);
 
     return 0;
 }
