@@ -113,22 +113,22 @@ void retain_shared_ptr(SharedPtr *sp) {
 
 // shared_ptr 참조 카운트 감소 및 메모리 해제 (release)
 void release_shared_ptr(SharedPtr *sp) {
-    int should_free = 0;
-
-    pthread_mutex_lock(sp->mutex);  // 참조 카운트 보호를 위한 뮤텍스 잠금
-    (*(sp->ref_count))--;           // 참조 카운트 감소
-    if (*(sp->ref_count) == 0) {    // 참조 카운트가 0이 되면 메모리 해제
-        should_free = 1;
+    if (sp->ptr == NULL) {
+        // If the pointer is already NULL, do nothing
+        safe_kernel_printf("SharedPtr is already released\n");
+        return;
     }
-    pthread_mutex_unlock(sp->mutex);  // 뮤텍스 잠금 해제
 
-    if (should_free) {
-        sp->deleter(sp->ptr);       // 사용자 정의 소멸자 호출을 통한 메모리 해제
-        sp->ptr = NULL;             // 포인터를 NULL로 설정하여 중복 해제를 방지
-        free(sp->ref_count);        // 참조 카운트 메모리 해제
-        pthread_mutex_destroy(sp->mutex);  // 뮤텍스 파괴
-        free(sp->mutex);            // 뮤텍스 메모리 해제
-    }
+    // Free the memory
+    sp->deleter(sp->ptr);       // 사용자 정의 소멸자 호출을 통한 메모리 해제
+    sp->ptr = NULL;             // 포인터를 NULL로 설정하여 중복 해제를 방지
+
+    // Clean up the ref_count and mutex
+    free(sp->ref_count);        // 참조 카운트 메모리 해제
+    sp->ref_count = NULL;
+    pthread_mutex_destroy(sp->mutex);  // 뮤텍스 파괴
+    free(sp->mutex);            // 뮤텍스 메모리 해제
+    sp->mutex = NULL;
 }
 
 // unique_ptr 메모리 해제 (release)

@@ -9,8 +9,7 @@ int main() {
     // 참조 카운트 증가 및 감소 테스트
     retain_shared_ptr(&sp);
     release_shared_ptr(&sp);
-    release_shared_ptr(&sp);  // 마지막 참조 해제 시 메모리 해제
-
+    
     // 메모리 해제 확인
     if (sp.ptr == NULL) {
         printf("SharedPtr 메모리 해제 성공\n");
